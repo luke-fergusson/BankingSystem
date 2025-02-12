@@ -5,10 +5,20 @@ public class Account {
     private double balance;
     private static ArrayList<Transaction> transactions = new ArrayList<>();
 
+    public String getAccountId() {return accountId;}
+    public double getBalance() {return balance;}
 
     public Account(String accountId, double balance) {
         this.accountId = accountId;
         this.balance = balance;
 
+    }
+
+    public void newTransaction(double amount, long time, Transaction.transactionType type) {
+        transactions.add(new Transaction(time, amount, type));
+    }
+
+    public void deposit(double amount) {
+        balance += amount;
     }
 }

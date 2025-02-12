@@ -5,10 +5,10 @@ public class Transaction {
         TRANSFER,
         SETUP
     }
-    long timeStamp;
-    float amount;
+    private long timeStamp;
+    private double amount;
 
-    public Transaction(long timeStamp, float amount, transactionType type) {
+    public Transaction(long timeStamp, double amount, transactionType type) {
         this.timeStamp = timeStamp;
         this.amount = amount;
 
