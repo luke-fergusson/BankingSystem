@@ -21,4 +21,11 @@ public class Account {
     public void deposit(double amount) {
         balance += amount;
     }
+    public void withdraw(double amount) {
+        balance -= amount;
+        if(balance < 0){
+            System.out.println("Insufficient funds");
+            balance += amount;
+        }
+    }
 }

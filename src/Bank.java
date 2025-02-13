@@ -1,9 +1,17 @@
+/*
+
+        Author: Luke Fergusson
+
+ */
 import java.text.DecimalFormat;
 import java.util.*;
+import java.sql.*;
+import java.util.Date;
 
 public class Bank {
     public static Date date;
-    public static DecimalFormat df = new DecimalFormat("#.00");
+    //to display the balance of accounts to 2dp
+    final public static DecimalFormat df = new DecimalFormat("#.00");
 
     private static ArrayList<User> users = new ArrayList<>();
     private  ArrayList<Account> accounts = new ArrayList<>();
@@ -13,7 +21,7 @@ public class Bank {
     public static void main(String[] args) {
         boolean originalEmail = true;
         boolean serviceStillInUser = true;
-
+        //Users can only gain access if they sign up or login
         while (serviceStillInUser){
             if(menu().equalsIgnoreCase("sign up")) {
                 signUp(originalEmail);
@@ -29,17 +37,18 @@ public class Bank {
                         System.out.println("Login Failed");
                     }
                 }
-                System.out.println("worked");
             }
 
         }
         bankingOptions();
     }
+    //displays the menu
     private static String menu() {
         System.out.println("Do you want to login or sign up");
         String registered = sc.nextLine();
         return registered;
     }
+    //Allows user to select service they want
     private static void bankingOptions() {
         System.out.println("--------------------");
         System.out.println("1. Show balance");
@@ -54,6 +63,7 @@ public class Bank {
         }
 
     }
+    //displays all the users accounts and there balances
     private static void displayBalance() {
         System.out.println("--------------------");
         System.out.println("ID: " + currentUser.getId());
@@ -70,10 +80,23 @@ public class Bank {
         }
 
     }
+    //removes money from a specific account
     private static void withdraw() {
         System.out.println("--------------------");
+        System.out.println("Out of which account: ");
+        String accountId = sc.nextLine();
+        for(Account a: currentUser.getAccounts()){
+            if(a.getAccountId().equals(accountId)){
+                System.out.println("How much do you want to withdraw?");
+                double withdrawAmount = sc.nextDouble();
+                date = new Date();
+                a.newTransaction(withdrawAmount, date.getTime(), Transaction.transactionType.WITHDRAWAL);
+                a.withdraw(withdrawAmount);
+            }
+        }
 
     }
+    //adds money to a specific account
     private static void deposit() {
         System.out.println("--------------------");
         System.out.println("Enter account number");
@@ -93,7 +116,7 @@ public class Bank {
         }
         bankingOptions();
     }
-
+    //generates a new user
     private static void signUp(boolean originalEmail) {
         System.out.println("Enter your name: ");
         String name = sc.nextLine();
@@ -113,6 +136,7 @@ public class Bank {
         }
         System.out.println("Sign up Successful");
     }
+    //checks if inputted values are valid
     private static boolean login() {
         System.out.println("--------------------");
         System.out.println("Enter your email address: ");
