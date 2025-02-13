@@ -10,6 +10,11 @@ import java.util.Date;
 
 public class Bank {
     public static Date date;
+    static final String Bank_DB = "jdbc:mysql://localhost:3306/BANK?useSSL=false&serverTimezone=UTC";
+
+    static final String User_DB = "root";
+    static final String Pass_DB = "!Testmysqlserver123";
+    static final String Query = "select * from User";
     //to display the balance of accounts to 2dp
     final public static DecimalFormat df = new DecimalFormat("#.00");
 
@@ -21,6 +26,19 @@ public class Bank {
     public static void main(String[] args) {
         boolean originalEmail = true;
         boolean serviceStillInUser = true;
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(Query);
+            while (rs.next()) {
+                System.out.println("ID: "+ rs.getInt("id"));
+                System.out.println("Name: "+ rs.getString("name"));
+                System.out.println("Email: "+ rs.getString("email"));
+                System.out.println("password: "+ rs.getString("password"));
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
         //Users can only gain access if they sign up or login
         while (serviceStillInUser){
             if(menu().equalsIgnoreCase("sign up")) {
