@@ -13,6 +13,12 @@ public class User {
     public String getName(){return name;}
     public ArrayList<Account> getAccounts(){return accounts;}
 
+    public void setEmail(String email){this.email = email;}
+    public void setPassword(String password){this.password = password;}
+    public void setId(String id){this.id = id;}
+    public void setName(String name){this.name = name;}
+    public void setAccounts(ArrayList<Account> accounts){this.accounts = accounts;}
+
     public User(String id, String name, String email, String password) {
         this.id = id;
         this.name = name;

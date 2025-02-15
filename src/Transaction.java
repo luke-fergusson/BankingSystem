@@ -2,8 +2,7 @@ public class Transaction {
     enum transactionType {
         DEPOSIT,
         WITHDRAWAL,
-        TRANSFER,
-        SETUP
+        TRANSFER
     }
     private long timeStamp;
     private double amount;

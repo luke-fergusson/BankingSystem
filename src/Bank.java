@@ -14,37 +14,25 @@ public class Bank {
 
     static final String User_DB = "root";
     static final String Pass_DB = "!Testmysqlserver123";
-    static final String Query = "select * from User";
     //to display the balance of accounts to 2dp
-    final public static DecimalFormat df = new DecimalFormat("#.00");
+    final public static DecimalFormat df = new DecimalFormat("0.00");
 
-    private static ArrayList<User> users = new ArrayList<>();
-    private  ArrayList<Account> accounts = new ArrayList<>();
-    private static Scanner sc = new Scanner(System.in);
-    private static User currentUser;
+    private static final Scanner sc = new Scanner(System.in);
+    private static  User currentUser = new User(null, null, null, null);
+    private static Account account =  new Account(null, 0.0);
+
+    private static ArrayList<Account> accounts = new ArrayList<>();
 
     public static void main(String[] args) {
-        boolean originalEmail = true;
         boolean serviceStillInUser = true;
-        try {
-            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(Query);
-            while (rs.next()) {
-                System.out.println("ID: "+ rs.getInt("id"));
-                System.out.println("Name: "+ rs.getString("name"));
-                System.out.println("Email: "+ rs.getString("email"));
-                System.out.println("password: "+ rs.getString("password"));
-            }
-        }catch (SQLException e) {
-            e.printStackTrace();
-        }
+
         //Users can only gain access if they sign up or login
         while (serviceStillInUser){
-            if(menu().equalsIgnoreCase("sign up")) {
-                signUp(originalEmail);
+            String service = menu();
+            if(service.equalsIgnoreCase("sign up")) {
+                signUp();
             }
-            if(menu().equalsIgnoreCase("login")){
+            if(service.equalsIgnoreCase("login")){
                 boolean loginComplete = false;
                 while (!loginComplete){
                     if (login()) {
@@ -63,8 +51,7 @@ public class Bank {
     //displays the menu
     private static String menu() {
         System.out.println("Do you want to login or sign up");
-        String registered = sc.nextLine();
-        return registered;
+        return sc.nextLine();
     }
     //Allows user to select service they want
     private static void bankingOptions() {
@@ -102,17 +89,24 @@ public class Bank {
     private static void withdraw() {
         System.out.println("--------------------");
         System.out.println("Out of which account: ");
-        String accountId = sc.nextLine();
+        sc.nextLine();
+        String accountNumber = sc.nextLine();
         for(Account a: currentUser.getAccounts()){
-            if(a.getAccountId().equals(accountId)){
+            if(a.getAccountId().equals(accountNumber)){
                 System.out.println("How much do you want to withdraw?");
                 double withdrawAmount = sc.nextDouble();
                 date = new Date();
                 a.newTransaction(withdrawAmount, date.getTime(), Transaction.transactionType.WITHDRAWAL);
-                a.withdraw(withdrawAmount);
+                if(a.withdraw(withdrawAmount)){
+                    updateBalance(a);
+                }
+
+            }
+            else {
+                System.out.println("Invalid account number");
             }
         }
-
+        bankingOptions();
     }
     //adds money to a specific account
     private static void deposit() {
@@ -128,6 +122,7 @@ public class Bank {
                 date = new Date();
                 a.newTransaction(amount, date.getTime() , Transaction.transactionType.DEPOSIT);
                 a.deposit(amount);
+                updateBalance(a);
             }else {
                 System.out.println("Account number does not match");
             }
@@ -135,24 +130,49 @@ public class Bank {
         bankingOptions();
     }
     //generates a new user
-    private static void signUp(boolean originalEmail) {
+    private static void signUp() {
         System.out.println("Enter your name: ");
         String name = sc.nextLine();
         System.out.println("Enter your email address: ");
         String email = sc.nextLine();
-        for (User u : users) {
-            if (u.getEmail().equals(email)) {
-                System.out.println("That email already exists!");
-                originalEmail = false;
-            }
-        }
-        if (originalEmail) {
-            System.out.println("Enter your password: ");
-            String password = sc.nextLine();
+        System.out.println("Enter your password: ");
+        String password = sc.nextLine();
+        int newId = newID();
 
-            users.add(new User("00000001", name, email, password));
+        String queryNewUser = "insert into User(id, name, email, password)" +
+                " values ('" + newId + "', '" + name + "', '" + email + "', '"+ password +"')";
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            int entryInserted = stmt.executeUpdate(queryNewUser);
+            if (entryInserted > 0) {
+                System.out.println("sign up Successful");
+            }else {
+                System.out.println("sign up Failed");
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
         }
-        System.out.println("Sign up Successful");
+        currentUser.setId(Integer.toString(newId));
+        currentUser.setName(name);
+        currentUser.setEmail(email);
+        currentUser.setPassword(password);
+
+        String queryNewAccount = "insert into Accounts(accountID, id, balance)" +
+                " values ('" + newID() + "', '" + currentUser.getId() + "', '"+ 0.00 +"')";
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            int entryInserted = stmt.executeUpdate(queryNewAccount);
+            if (entryInserted > 0) {
+                System.out.println("Account creation Successful");
+            }else {
+                System.out.println("Account creation Failed");
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
     //checks if inputted values are valid
     private static boolean login() {
@@ -162,15 +182,57 @@ public class Bank {
         System.out.println("Enter your password: ");
         String password = sc.nextLine();
 
-        User u;
-        for(User user : users) {
-            if(Objects.equals(user.getEmail(), email)){
-                if(user.getPassword().equals(password)) {
-                    currentUser = user;
-                    return true;
-                }
+        String query = "SELECT * FROM USER WHERE EMAIL = '" + email + "'" + " AND PASSWORD = '" + password + "'";
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query);
+            while (rs.next()) {
+                currentUser.setId(rs.getString("id"));
+                currentUser.setName(rs.getString("name"));
+                currentUser.setEmail(rs.getString("email"));
+                getAccounts();
+                return true;
             }
+        }catch (SQLException e) {
+            e.printStackTrace();
         }
         return false;
+    }
+    private static void getAccounts(){
+        String allAccounts = "SELECT * FROM Accounts WHERE id = '" + currentUser.getId() + "'" ;
+
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(allAccounts);
+            while (rs.next()) {
+                account.setAccountId(rs.getString("accountID"));
+                account.setBalance(rs.getDouble("balance"));
+                accounts.add(account);
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+        currentUser.setAccounts(accounts);
+        System.out.println(currentUser.getAccounts());
+    }
+    public static int newID(){
+        return (int) (Math.random() * 100000000);
+    }
+    private static void updateBalance(Account account) {
+        String queryNewBalance = "update Accounts set balance = " + "'" + account.getBalance() + "' where accountID = '" + account.getAccountId() + "'";
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            int entryInserted = stmt.executeUpdate(queryNewBalance);
+            if (entryInserted > 0) {
+                System.out.println("Transaction Successful");
+            }else {
+                System.out.println("Transaction Failed");
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

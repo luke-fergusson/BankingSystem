@@ -8,6 +8,10 @@ public class Account {
     public String getAccountId() {return accountId;}
     public double getBalance() {return balance;}
 
+    public void setAccountId(String newAccountId) {this.accountId = newAccountId;}
+    public void setBalance(double newBalance) {this.balance = newBalance;}
+
+
     public Account(String accountId, double balance) {
         this.accountId = accountId;
         this.balance = balance;
@@ -21,11 +25,13 @@ public class Account {
     public void deposit(double amount) {
         balance += amount;
     }
-    public void withdraw(double amount) {
+    public boolean withdraw(double amount) {
         balance -= amount;
         if(balance < 0){
             System.out.println("Insufficient funds");
             balance += amount;
+            return false;
         }
+        return true;
     }
 }
