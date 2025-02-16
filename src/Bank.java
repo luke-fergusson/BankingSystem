@@ -3,14 +3,17 @@
         Author: Luke Fergusson
 
  */
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.sql.*;
 import java.util.Date;
+import java.security.*;
 
 public class Bank {
     public static Date date;
-    static final String Bank_DB = "jdbc:mysql://localhost:3306/BANK?useSSL=false&serverTimezone=UTC";
+    static final String Bank_DB = "jdbc:mysql://localhost:3306/BANK?useSSL=false&allowPublicKeyRetrieval=true&" +
+            "serverTimezone=UTC";
 
     static final String User_DB = "root";
     static final String Pass_DB = "!Testmysqlserver123";
@@ -18,7 +21,7 @@ public class Bank {
     final public static DecimalFormat df = new DecimalFormat("0.00");
 
     private static final Scanner sc = new Scanner(System.in);
-    private static  User currentUser = new User(null, null, null, null);
+    private static  User currentUser = new User(null, null, null, null, null);
     private static Account account =  new Account(null, 0.0);
 
     private static ArrayList<Account> accounts = new ArrayList<>();
@@ -138,9 +141,12 @@ public class Bank {
         System.out.println("Enter your password: ");
         String password = sc.nextLine();
         int newId = newID();
-
-        String queryNewUser = "insert into User(id, name, email, password)" +
-                " values ('" + newId + "', '" + name + "', '" + email + "', '"+ password +"')";
+        byte[][] hashPassword = hash(password);
+        System.out.println(hashPassword[0]);
+        System.out.println(hashPassword[1]);
+        String queryNewUser = "insert into User(id, name, email, password, salt)" +
+                " values ('" + newId + "', '" + name + "', '" + email + "', '"+ hashPassword[0] +"', '"
+                + hashPassword[1] + "')";
         try {
             Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
             Statement stmt = conn.createStatement();
@@ -157,6 +163,7 @@ public class Bank {
         currentUser.setName(name);
         currentUser.setEmail(email);
         currentUser.setPassword(password);
+        currentUser.setSalt(hashPassword[1]);
 
         String queryNewAccount = "insert into Accounts(accountID, id, balance)" +
                 " values ('" + newID() + "', '" + currentUser.getId() + "', '"+ 0.00 +"')";
@@ -181,8 +188,23 @@ public class Bank {
         String email = sc.nextLine();
         System.out.println("Enter your password: ");
         String password = sc.nextLine();
+        byte[] salt = null;
+        String getSalt = "SELECT salt FROM USER WHERE EMAIL = '" + email + "'";
+        try {
+            Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(getSalt);
+            while (rs.next()) {
+                salt = rs.getBytes("salt");
+            }
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+        byte[][] newHashPassword = hash(password, salt);
+        System.out.println("salt: " + salt);
+        System.out.println(newHashPassword[0]);
 
-        String query = "SELECT * FROM USER WHERE EMAIL = '" + email + "'" + " AND PASSWORD = '" + password + "'";
+        String query = "SELECT * FROM USER WHERE EMAIL = '" + email + "'" + " AND PASSWORD = '" + newHashPassword[0] + "'";
         try {
             Connection conn = DriverManager.getConnection(Bank_DB, User_DB, Pass_DB);
             Statement stmt = conn.createStatement();
@@ -233,6 +255,38 @@ public class Bank {
             }
         }catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+    private static byte[][] hash(String password) {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            md.update(salt);
+            byte[] hashed = md.digest(password.getBytes(StandardCharsets.UTF_8));
+            byte[][] saltAndHash = new byte[2][16];
+            saltAndHash[0] = hashed;
+            saltAndHash[1] = salt;
+
+            return saltAndHash;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+    private static byte[][] hash(String password, byte[] salt) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            md.update(salt);
+            byte[] hashed = md.digest(password.getBytes(StandardCharsets.UTF_8));
+            byte[][] saltAndHash = new byte[2][16];
+            saltAndHash[0] = hashed;
+            saltAndHash[1] = salt;
+
+            return saltAndHash;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
     }
 }
